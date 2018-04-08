@@ -1,6 +1,87 @@
 # The Noob's Guide to a VMware NSX-T/PKS Home Lab
 
-)
+
+One of my current projects recently started a VMware Pivotal PKS evaluation... and so first order of business (as always) was to setup a home lab.
+
+William Lam recently posted a tutorial walkthrough series for __NSX-T and PKS__ on [virtuallyghetto](https://www.virtuallyghetto.com/2018/03/getting-started-with-vmware-pivotal-container-service-pks-part-1-overview.html).  I used this as the foundation for my home lab setup, but it wasn't enough for me to get things running.  NSX-T is complicated and it was only with the generous help of the VMware SE asigned to work with us on our Proof-of-Concept with PKS that I was able to get things up and running. 
+
+> __Warning:__ This stuff is complicated.
+
+This post is an attempt to fill in some of the gaps I found in Lam's series with information that wasn't initially obvious to me - and may not be obvious to you.
+
+> __Full disclosure:__ I am not a VMware certified anything.
+
+_Part 1_ of the PKS series is relatively straightforward:
+
+[Getting started with VMware Pivotal Container Service (PKS) Part 1: Overview](https://www.virtuallyghetto.com/2018/03/getting-started-with-vmware-pivotal-container-service-pks-part-1-overview.html)
+
+_Part 2_ involves prepping your PKS workstation VM.  The folks at PKS are fond of Ubuntu, and so the tutorial uses an Ubuntu VM, but any machine that can run the required tools will do.  I prepped both my Macbook Pro and my CentOS7 cluster-builder control station with the necessary tools, as per the article:
+
+[Getting started with VMware Pivotal Container Service (PKS) Part 2: PKS Client](https://www.virtuallyghetto.com/2018/03/getting-started-with-vmware-pivotal-container-service-pks-part-2-pks-client.html)
+
+_Part 3_ is where things start to get deep into the weeds, and fast.  The article on __NSX-T__ makes reference to having a working _NSX-T 2.x_ lab, and references the [automated powershell script](https://www.virtuallyghetto.com/2017/10/vghetto-automated-nsx-t-2-0-lab-deployment.html) for setting one up.  Unfornately NSX-T is a very obscure and hard to aquire technology that not a lot of folks are familiar with, so the automated install doesn't really help with understanding the components and how they fit together.
+
+[Getting started with VMware Pivotal Container Service (PKS) Part 3: NSX-T](https://www.virtuallyghetto.com/2018/03/getting-started-with-vmware-pivotal-container-service-pks-part-3-nsx-t.html)
+
+> If you are like me this step is where you will stay... for awhile.  It was only with the help of my new friend at VMware who was kind enough to walk me through the install process that I was able to finally grok (or maybe partially grok) the seemingly infinite complexity of NSX-T.
+
+So here I will augment Mr. Lam's fine work with my own noobs guide to installing an NSX-T/PKS home lab... 
+
+> I am assuming you have downloaded all the depencencies from Lam's article.
+
+First let's start with a diagram.
+
+## The Home Lab
+
+![condo-datacenter](/content/images/2018/04/NSX-T-condo-lab.png)
+
+In this post I take the example scenario described in Lam's series and implement it specifically in my home lab setup.  When I first reviewed the [diagram](https://i0.wp.com/www.virtuallyghetto.com/wp-content/uploads/2018/03/1.-Getting-Started-With-PKS-Overview-0.png?ssl=1) from the article, it wasn't clear to me how the two VLANs (3250 and 3251) might relate to the physical network, so I am presenting the entire picture here in an attempt to clear that up for anyone else who finds it fuzzy or confusing.
+
+> My friendly neighbourhood VMware SE simplified the configuration to better suit my lab setup ;)
+
+What Mr. Lam references as his management network of __3250__ (I'm sure he has many), is actually just my primary home network of __192.168.1.0/24__.
+
+His __3251__ network isn't actually needed in my setup.
+
+And I never caught the significance of the dedicated private portgroup required for NSX that is only used at Layer 2, which in this example is implemented as __NSX Tunnel__.  It was our VMware SE that explained that part, which I had totally missed.
+
+The __labs__ cluster is used for management and contains two physical ESXi hosts: __esxi-5__ and __esxi-6__.  These are the compute resources dedicated to the NSX-T/ESXi virtual lab.
+
+> Specs for each physical ESXi host: i7 - 7700, 64GB Ram, 512GB m2 Nvme SSD local datastores.  I run all three of my Virtual ESXi hosts on __esxi-6__ along with my __nsx-edge__, __pks__ and __bosh director__ VMs (as per the diagram).
+
+Before we dive into NSX-T we should tackle the matter of setting up some virtual ESXi hosts and a dedicated vSphere cluster:
+
+## Nested ESXi for Dummies
+
+Deploying the virtual ESXi hypervisors as VMs is actually fairly straightforward until you get to the part about networking with VLANs.  If you use VLANs, and wish to make them available to your virtual ESXi hosts, make sure to follow this [tip](https://blog.idstudios.io/nested-esxi-and-vlans/).
+
+The physical ESXi hosts need to have access to a dedicated __NSX Tunnel__ portgroup (this is an NSX requirement).  In my home lab I use standard __VSS__ switches on my physical ESXi boxes so I am not dependent on vSphere - but I used a vSphere __VDS__ for my __virtual-lab__ cluster of VESXi hosts I am dedicating to NSX... so I had to create two __NSX Tunnel__ portgroups (one on each physical ESXi hosts in the local VSS __Switch0__, and one on my _VDS_ that I will use in my virtual ESXi hosts - VLAN 0.  The __NSX Tunnel__ basically just provides a level 2 dedicated portgroup to NSX.
+
+As per the diagram above setup your ESXi VMs so that their network adapters are as follows:
+
+* Network Adapter 1: __VLAN Trunk__
+* Network Adapter 2: __VM Network__
+* Network Adapter 3: __NSX Tunnel__
+
+These will then map to __vmnic0__, __vmnic1__ and __vmnic2__ respectively.
+
+__This is important later on when mapping our uplink ports.__
+
+> I like to setup my virtual ESXi hosts with __/etc/ssh/keys-root/authorized_keys__ for passwordless ssh, but this isn't required if you enjoy entering passwords.
+
+Once the ESXi hosts have been uploaded and installed they should be added to a dedicated cluster, such as the __virtual-lab__ in this example.
+
+> Now would be a good time to enable __DRS__ on your newly created __virtual-lab__ cluster.  If you forget to do this, as I did, you will regret it when you deploy, and then have to redeploy, your first k8s cluster with PKS, which leverages and depends on __DRS__ for balancing of the k8s node VMs over ESXi hosts.
+
+We will use the __virtual-lab__ virtual ESXi hosts (vesxi-1 to vesxi-3) for our NSX VIB installs (and NSX managed networks) and for deploying our PKS clusters.
+
+We will use the __labs__ cluster and our physical ESXi hosts (esxi-5 and esxi-6 from above) for deploying the NSX and PKS managment VMs, as well as our virtual ESXi VMs.
+
+> You will need to map this to your own ESXi home lab environment and hopefully the information provided here makes it easier and not harder.
+
+The following is a screenshot of my vSphere setup for the __labs__ and __virtual-lab__ cluster environments:
+
+![vsphere-clusters-labs](/content/images/2018/04/vsphere-clusters-labs.png)
 
 and 
 
@@ -378,3 +459,5 @@ _Part 5_ and _Part 6_ go fairly smoothly from here, as long as you made sure to 
 If all goes well you'll be `kubectl`ing away with __PKS__.
 
 But if you are like me you'll repeat this entire thing a few dozen times first :)
+
+
