@@ -79,17 +79,9 @@ We will use the __labs__ cluster and our physical ESXi hosts (esxi-5 and esxi-6 
 
 > You will need to map this to your own ESXi home lab environment and hopefully the information provided here makes it easier and not harder.
 
-The following is a screenshot of my vSphere setup for the __labs__ and __virtual-lab__ cluster environments:
+The following is a screenshot of my vSphere setup for the __labs__ and __virtual-lab__ cluster environments, as well as the __Networks__ involved.
 
-![vsphere-clusters-labs](/content/images/2018/04/vsphere-clusters-labs.png)
-
-and 
-
-![vsphere-clusters-virtual-lab](/content/images/2018/04/vsphere-clusters-virtual-lab.png)
-
-As well as the __Networks__ involved.
-
-![vsphere-networks](/content/images/2018/04/vsphere-networks.png)
+![vsphere-layout](/content/images/2018/04/vsphere-layout.png)
 
 > I also created an __NSX Network__ on VLAN 90 and bound it to the remaining nics on the virtual ESXi hosts and edge VM, but it likely isn't required and seems to have no direct mapping.
 
