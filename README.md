@@ -169,6 +169,18 @@ The following is a screenshot of my vSphere setup for the __labs__ and __virtual
     ../../pks/nsxt/Nested_ESXi6.5u1_Appliance_Template_v1.0.ova \
     vi://administrator@idstudios.local:mysecret@vsphere.idstudios.local/?ip=192.168.1.246
 
+### Virtual SAN
+
+You'll also need to setup some sort of shared datastore solution for the Virtual ESXi hosts. I stopped short of setting up __vSAN__ and opted for a simpler approach.  If you don't have access to a SAN in your home lab, you can create one fairly easily with a simple VM on a hypervisor.
+
+Make sure it is on a seperate ESXi host as you can't host an iSCSI datastore from a VM running on the same hypervisor that intends to mount the target.
+
+I used [this guide](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/storage_administration_guide/ch-iscsi#iscsi-target-setup) from RedHat to setup a CentOS7 iSCSI target in a VM.
+
+You can then configure your iSCSI adapter on your ESXi host to see the LUNs made availabe on your iSCSI VM, format them with vmfs, and just like that you have a SAN.
+
+Or you could use vSAN...
+
 ## NSX-T 2.1 Install for Dummies
 
 I followed the [NSX-T install document](https://docs.vmware.com/en/VMware-NSX-T/2.1/com.vmware.nsxt.install.doc/GUID-3E0C4CEC-D593-4395-84C4-150CD6285963.html) and it was fairly straightforward up to the point of the Edge and transport nodes.
