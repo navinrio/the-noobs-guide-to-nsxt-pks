@@ -257,7 +257,7 @@ Next up the NSX controllers. I deployed 2 controllers by mistake and really only
     ../../pks/nsxt/nsx-controller-2.1.0.0.0.7395493.ova \
     vi://administrator@idstudios.local:mysecret@vsphere.idstudios.local/?ip=192.168.1.246
 
-At this point it is best to refer to the NSX-T installation guide instructions on creating management clusters and controller clusters and the like.  See [Join NSX Clusters with the NSX Manager](https://docs.vmware.com/en/VMware-NSX-T/2.1/com.vmware.nsxt.install.doc/GUID-05434745-7D74-4DA8-A68E-9FE17093DA7B.html) for details and follow the guide up to the NSX Edge installation.  It involves `ssh`ing into the manager and controller and executing a few arcane GUID based join commands that are common among clustering technology.
+At this point it is best to refer to the NSX-T installation guide instructions on creating management clusters and controller clusters and the like.  See [Join NSX Clusters with the NSX Manager](https://docs.vmware.com/en/VMware-NSX-T/2.1/com.vmware.nsxt.install.doc/GUID-05434745-7D74-4DA8-A68E-9FE17093DA7B.html) for details and follow the guide up to the NSX Edge installation.  It involves `ssh`ing into the manager and controller and executing a few arcane token based join commands that are common among clustering technology.
 
 I tried to follow the documentation right to the end but was unable to sort out the transport settings.  It was only with the kind help of the VMware SE who guided me through the process, described below...
 
