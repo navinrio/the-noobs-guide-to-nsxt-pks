@@ -39,9 +39,9 @@ In this post I take the example scenario described in Lam's series and implement
 
 > My friendly neighbourhood VMware SE simplified the configuration to better suit my lab setup ;)
 
-What Mr. Lam references as his management network of __3250__ (I'm sure he has many), is actually just my primary home network of __192.168.1.0/24__.
+What Mr. Lam references as his management network of __3251__ (I'm sure he has many), is actually just my primary home network of __192.168.1.0/24__.
 
-His __3251__ network isn't actually needed in my setup.
+His __3250__ network isn't actually needed in my setup.
 
 And I never caught the significance of the dedicated private portgroup required for NSX that is only used at Layer 2, which in this example is implemented as __NSX Tunnel__.  It was our VMware SE that explained that part, which I had totally missed.
 
