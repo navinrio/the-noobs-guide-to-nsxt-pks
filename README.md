@@ -3,7 +3,7 @@
 
 One of my current projects recently started a VMware Pivotal PKS evaluation... and so first order of business (as always) was to setup a home lab.
 
-William Lam recently posted a tutorial walkthrough series for __NSX-T and PKS__ on [virtuallyghetto](https://www.virtuallyghetto.com/2018/03/getting-started-with-vmware-pivotal-container-service-pks-part-1-overview.html).  I used this as the foundation for my home lab setup, but it wasn't enough for me to get things running.  NSX-T is complicated and it was only with the generous help of the VMware SE asigned to work with us on our Proof-of-Concept with PKS that I was able to get things up and running. 
+William Lam recently posted a tutorial walkthrough series for __NSX-T and PKS__ on [virtuallyghetto](https://www.virtuallyghetto.com/2018/03/getting-started-with-vmware-pivotal-container-service-pks-part-1-overview.html).  I used this as the foundation for my home lab setup, but it wasn't enough for me to get things working.  NSX-T is complicated and it was only with the generous help of the VMware SE asigned to work with us on our PKS Proof-of-Concept that I was able to get things up and running.
 
 > __Warning:__ This stuff is complicated.
 
