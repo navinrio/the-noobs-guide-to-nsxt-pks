@@ -47,7 +47,7 @@ And I never caught the significance of the dedicated private portgroup required 
 
 The __labs__ cluster is used for management and contains two physical ESXi hosts: __esxi-5__ and __esxi-6__.  These are the compute resources dedicated to the NSX-T/ESXi virtual lab.
 
-> Specs for each physical ESXi host: i7 - 7700, 64GB Ram, 512GB m2 Nvme SSD local datastores.  I run all three of my Virtual ESXi hosts on __esxi-6__ along with my __nsx-edge__, __pks__ and __bosh director__ VMs (as per the diagram).
+> Specs for each physical ESXi host: i7 - 7700, 64GB Ram, 512GB m2 Nvme SSD local datastores.  I run all three of my Virtual ESXi hosts on __esxi-6__ along with my __nsx-edge__, __pks__ and __bosh director__ VMs (as per the diagram).  However, my __vesxi__ virtual ESXi hosts all share the same single iSCSI based datastore, which is actually just a CentOS7 iSCSI target hosting up a VMDK from an SSD running on a Mac Mini, over my primary Gigabit ethernet (not even dedicated).  And still I average nearly 100 MB/s write speed.  Remarkable.
 
 Before we dive into NSX-T we should tackle the matter of setting up some virtual ESXi hosts and a dedicated vSphere cluster:
 
