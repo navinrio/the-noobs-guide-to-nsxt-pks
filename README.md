@@ -302,7 +302,7 @@ and
 
 ![nsxlab-vlan-tz](/content/images/2018/04/nsxlab-vlan-tz.png)
 
-> Note the __N-DVS__ logical switch names we assign (and create) here as part of our transport zones.  These will be references again when we configure our __Edge Transport Node__ a bit further on.
+> Note the __N-DVS__ logical switch names we assign (and create) here as part of our transport zones.  These will be referenced again when we configure our __Edge Transport Node__ a bit further on.
 
 
 #### Uplink Profiles
