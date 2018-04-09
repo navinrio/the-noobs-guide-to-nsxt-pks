@@ -367,8 +367,8 @@ At this point the __Edge Transport Node__ should be configured and we can rejoin
 Everything should be in place to proceed with his direction, with a few adjustments:
 
 * Remember that his 3251 VLAN is really our primary 192.168.1.0 home network, and we don't really need both 3250 and 3251 (though it is likely a good practice).
-* Remember to map all of his 172.30.51.0/24 addresses to what we implement as 192.168.1.0/24.  And that we don't use 172.30.50.0/24 at all.
-* His pfSense router is really just our primary home gateway to the internet and the both VLANs aren't actually needed in our configuration, we use __192.168.1.8__ on the main network as our __uplink-1__ uplink port associated with our __T0__ router:
+* Remember to map all of his __172.30.51.0/24__ addresses to what we implement as __192.168.1.0/24__.  And that we __don't use 172.30.50.0/24__ at all.
+* His pfSense router is really just our primary home gateway to the internet and the both VLANs aren't actually needed in our configuration, we use __192.168.1.8__ on the main network as our __uplink-1__ uplink port address associated with our __T0__ router:
 
 ![T0-uplink-1](/content/images/2018/04/T0-uplink-1.png)
 
