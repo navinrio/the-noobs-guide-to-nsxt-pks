@@ -177,7 +177,7 @@ Make sure it is on a seperate ESXi host as you can't host an iSCSI datastore fro
 
 I used [this guide](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/storage_administration_guide/ch-iscsi#iscsi-target-setup) from RedHat to setup a CentOS7 iSCSI target in a VM.
 
-You can then configure your iSCSI adapter on your ESXi host to see the LUNs made availabe on your iSCSI VM, format them with vmfs, and just like that you have a SAN.
+You can then configure your iSCSI adapter on your ESXi host to see the LUNs made available from your iSCSI VM, format them with vmfs, and just like that you have a SAN.
 
 Or you could use vSAN...
 
@@ -185,7 +185,7 @@ Or you could use vSAN...
 
 I followed the [NSX-T install document](https://docs.vmware.com/en/VMware-NSX-T/2.1/com.vmware.nsxt.install.doc/GUID-3E0C4CEC-D593-4395-84C4-150CD6285963.html) and it was fairly straightforward up to the point of the Edge and transport nodes.
 
-> You should read this guide and be prepared to refer to it as I won't be repeating all of the information involved in the NSX-T setup, just the bits that aren't entirely clear from the docs.
+> You should read this guide and be prepared to refer to it as I won't be repeating all of the information involved in the NSX-T setup, just the bits that aren't entirely clear from the docs.  But don't try to read it in Chrome (all I get is a Bad Request error), VMware documentation has some serious challenges, and is rather unpleasantly formatted and organized even when it does load.  Frankly I don't have the patience - they need a rewrite on their documentation platform (checkout readthedocs) so I downloaded the whole thing as a [pdf](https://docs.vmware.com/en/VMware-NSX-T/2.1/nsxt_21_install.pdf) and read it in Preview. It is actually very pleasant to read and well written when you get it out of it's poorly built HTML delivery context.
 
 No offense to VMware but the GUI web form installation guides are sort of ridiculous... type the info in twice and you are on the road to insanity.  __ovftool__ is still the best swiss army knife tool there is!
 
