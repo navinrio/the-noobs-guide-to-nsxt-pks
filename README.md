@@ -29,7 +29,7 @@ So here I will augment Mr. Lam's fine work with my own noobs guide to installing
 * I am assuming you have downloaded all the depencencies from Lam's article.
 * It would be wise to review the articles first to get a sense of all the steps.  This is only a few extra tips in addition to the "Lam Series" - I relied heavily on his step-by-steps at all stages.
 
-## ** Warning ** 
+## ** Warning **
 
 These topics probably won't mean anything yet, but take note anyway!  It could save you hours:
 
@@ -43,7 +43,11 @@ These topics probably won't mean anything yet, but take note anyway!  It could s
 
 ![MTU](/content/images/switch0-mtu.png)
 
-First let's start with a diagram.
+* __The Edge needs to be LARGE__... one of the few gotchas I didn't hit, but not clearly called out in the article: __PKS requires the Edge to be 8 CPU and 16GB Ram__, it is a hard limit and when you get to the very end and try to install PKS, the NSX-T errand will stop you if your edge VM is too small.
+
+Ok... keep those things in mind...
+
+Now let's start with a diagram:
 
 ## Context: The Home Lab
 
