@@ -177,6 +177,10 @@ Remember to add two additional network adapters so you have the following config
 * Network Adapter 2: __VM Network__
 * Network Adapter 3: __NSX Tunnel__
 
+The Network Adapters on your Virtual ESXi hosts should look as follows:
+
+![vesxi-networks](/content/images/vesxi-networks.png)
+
 ### Virtual SAN
 
 You'll also need to setup some sort of shared datastore solution for the Virtual ESXi hosts. I stopped short of setting up __vSAN__ and opted for a simpler approach.  If you don't have access to a SAN in your home lab, you can create one fairly easily with a simple VM on a hypervisor.
@@ -193,7 +197,7 @@ Or you could use vSAN...
 
 I followed the [NSX-T install document](https://docs.vmware.com/en/VMware-NSX-T/2.1/com.vmware.nsxt.install.doc/GUID-3E0C4CEC-D593-4395-84C4-150CD6285963.html) and it was fairly straightforward up to the point of the Edge and transport nodes.
 
-> You should read this guide as I won't be repeating all of the information involved in the NSX-T setup, just the bits that aren't entirely clear from the docs and are only covered off by the automated script referenced in the article.
+> You should read this guide as I won't be repeating all of the information involved in the NSX-T setup, just the bits that aren't entirely clear from the docs and are only covered off by the automated script referenced in Mr. Lam's article.
 
 Here are the __ovftool__ scripts I used (several times over)... mostly taken right from the docs.
 
@@ -390,7 +394,7 @@ So now we must create the __Edge Transport Node__:
 
 Under __Fabric__>__Nodes__>__Transport Nodes__ click __Add__.  Enter __edge-transport-node__ as the name, and for the __Node__ chose your __Edge VM__.
 
-Select both of your __transport zones__.  Your _General__ tab should appear as shown below:
+Select both of your __transport zones__.  Your _General_ tab should appear as shown below:
 
 ![edge-transport-general](/content/images/edge-transport-general.png)
 
@@ -543,3 +547,16 @@ If you get all the way to the end, and go to deploy a k8s cluster only to have t
 * Not enabling the NSX-T Errand that tags everything (which is off by default because Flannal is the default networking stack for PKS).  This is set when configuring PKS itself in Ops Manager, in the PKS Tile settings under __Errands__ and  __NSX-T Validation errand__ should be set to "On" or NSX-T will require advanced manual tagging (that is as much as I know) and without it will not work out-of-the-box.  The errand is actually a requirement of NSX-T, unless you are a big brained VMware SE.
 
 * Not using PCF Ops Manager for vSphere __build 249__.
+
+### The Logs
+
+If things go sideways and you are inclined to drill into why...
+
+    bosh ssh -d <bosh deployment instance id> <worker/master/node id>
+
+As mentioned, you won't get any help from __journald__, but you will find all the logs cleverly hidden at:
+
+    /var/vtep/sys/log
+
+> This PKS guide to [diagnostic tools](https://docs.pivotal.io/runtimes/pks/1-0/diagnostic-tools.html) has some good tips.
+
