@@ -335,7 +335,7 @@ My setup has two transport zones defined:
 
 and 
 
-#### nsxlab-vlan-tz
+#### pks-lab-vlan-tz
 
 ![pks-lab-overlay-tz](/content/images/pks-lab-overlay-tz.png)
 
