@@ -1,13 +1,10 @@
 # The Noob's Guide to a VMware NSX-T/PKS Home Lab
 
+William Lam recently posted a tutorial walkthrough series for __NSX-T and PKS__ on [virtuallyghetto](https://www.virtuallyghetto.com/2018/03/getting-started-with-vmware-pivotal-container-service-pks-part-1-overview.html).  I used this as the foundation for my home lab setup, but it was a struggle to get things working, and without the help of a very clever VMware SE, I probably wouldn't have been able to figure it out.  .
 
-One of my current projects recently started a VMware Pivotal PKS evaluation... and so first order of business (as always) was to setup a home lab.
+> __Warning:__ NSX-T is complicated.
 
-William Lam recently posted a tutorial walkthrough series for __NSX-T and PKS__ on [virtuallyghetto](https://www.virtuallyghetto.com/2018/03/getting-started-with-vmware-pivotal-container-service-pks-part-1-overview.html).  I used this as the foundation for my home lab setup, but it wasn't enough for me to get things working.  NSX-T is complicated and it was only with the generous help of the VMware SE asigned to work with us on our PKS Proof-of-Concept that I was able to get things up and running.
-
-> __Warning:__ This stuff is complicated.
-
-This post is an attempt to fill in some of the gaps I found in Lam's series with information that wasn't initially obvious to me - and may not be obvious to you.
+This post is an attempt to fill in some of the gaps in the series with information that wasn't initially obvious to me - and may not be obvious to you.
 
 > __Full disclosure:__ I am not a VMware certified anything.
 
@@ -19,19 +16,36 @@ _Part 2_ involves prepping your PKS workstation VM.  The folks at PKS are fond o
 
 [Getting started with VMware Pivotal Container Service (PKS) Part 2: PKS Client](https://www.virtuallyghetto.com/2018/03/getting-started-with-vmware-pivotal-container-service-pks-part-2-pks-client.html)
 
-_Part 3_ is where things start to get deep into the weeds, and fast.  The article on __NSX-T__ makes reference to having a working _NSX-T 2.x_ lab, and references the [automated powershell script](https://www.virtuallyghetto.com/2017/10/vghetto-automated-nsx-t-2-0-lab-deployment.html) for setting one up.  Unfornately NSX-T is a very obscure and hard to aquire technology that not a lot of folks are familiar with, so the automated install doesn't really help with understanding the components and how they fit together.
+_Part 3_ is where things start to get deep into the weeds, and fast.  The article on __NSX-T__ makes reference to having a working _NSX-T 2.x_ lab, and references the [automated powershell script](https://www.virtuallyghetto.com/2017/10/vghetto-automated-nsx-t-2-0-lab-deployment.html) for setting one up.  It may work for you, but I wanted to understand how all the parts fit together and for me doing it by hand is the ~best~ only way to learn.
 
 [Getting started with VMware Pivotal Container Service (PKS) Part 3: NSX-T](https://www.virtuallyghetto.com/2018/03/getting-started-with-vmware-pivotal-container-service-pks-part-3-nsx-t.html)
 
-> If you are like me this step is where you will stay... for awhile.  It was only with the help of my new friend at VMware who was kind enough to walk me through the install process that I was able to finally grok (or maybe partially grok) the seemingly infinite complexity of NSX-T.
+> I was stuck on Step #3... for awhile.  A kindly VMware SE walked me through it, and with his help, it started to make sense.
 
-So here I will augment Mr. Lam's fine work with my own noobs guide to installing an NSX-T/PKS home lab... 
+So here I will augment Mr. Lam's fine work with my own noobs guide to installing an NSX-T/PKS home lab...
 
-> I am assuming you have downloaded all the depencencies from Lam's article.
+## Prep
+
+* I am assuming you have downloaded all the depencencies from Lam's article.
+* It would be wise to review the articles first to get a sense of all the steps.  This is only a few extra tips in addition to the "Lam Series" - I relied heavily on his step-by-steps at all stages.
+
+## ** Warning ** 
+
+These topics probably won't mean anything yet, but take note anyway!  It could save you hours:
+
+* __Beware of the "Down"__.  I mistook the status of Down in the transport nodes as failed installation or configuration.  After wasting countless hours experimenting with variations on what appeared to be correctly configured, I was informed, this is __by design__.  The status won't go green until a cluster has been deployed and their are k8s nodes using the VTEP.
+
+![Beware the Down](/content/images/beware-the-down.png)
+
+* __>= 1600 MTU is required__.  Make sure to set all of the switches (VSS and VDS) involved to 1600 MTU or greater as jumbo frames is required for correct NSX-T operation.
+
+![Switch Settings](/content/images/virtual-switch-mtu-security.png)
+
+![MTU](/content/images/switch0-mtu.png)
 
 First let's start with a diagram.
 
-## The Home Lab
+## Context: The Home Lab
 
 ![condo-datacenter](/content/images/2018/04/NSX-T-condo-lab.png)
 
@@ -43,9 +57,14 @@ What Mr. Lam references as his management network of __3251__ (I'm sure he has m
 
 His __3250__ network isn't actually needed in my setup.
 
-And I never caught the significance of the dedicated private portgroup required for NSX that is only used at Layer 2, which in this example is implemented as __NSX Tunnel__.  It was our VMware SE that explained that part, which I had totally missed.
+Put simply (very simply):
 
-The __labs__ cluster is used for management and contains two physical ESXi hosts: __esxi-5__ and __esxi-6__.  These are the compute resources dedicated to the NSX-T/ESXi virtual lab.
+* The overlay transport zone and dedicated port group support the overlay networks and traffic in the k8s environment.  This VTEP network allows all of the k8s VMs to communicate in their own network spaces on top of the ESXi hosts that are the "transport nodes" for this virtual network (that sits on top of vSpheres already virtual network - head hurt yet?)
+* The VLAN transport zone and dedicated port group and uplink represent the client traffic entry point into both the NSX-T k8s dedicated load balancers and the k8s managmenet nodes network.
+
+The __labs__ cluster is used for management and contains two physical ESXi hosts: __esxi-5__ and __esxi-6__.  These are the compute resources dedicated to the NSX-T/ESXi virtual lab.  It is referred to as the __management cluster__.
+
+The __pks-lab__ cluster is made up of three nested ESXi hosts: __vesxi-1__, __vesxi-2__ and __vesxi-3__.  It is referred to as the __compute cluster__, and it is where PKS will place all the k8s nodes and related artifacts.
 
 > Specs for each physical ESXi host: i7 - 7700, 64GB Ram, 512GB m2 Nvme SSD local datastores.  I run all three of my Virtual ESXi hosts on __esxi-6__ along with my __nsx-edge__, __pks__ and __bosh director__ VMs (as per the diagram).  However, my __vesxi__ virtual ESXi hosts all share the same single iSCSI based datastore, which is actually just a CentOS7 iSCSI target hosting up a VMDK from an SSD running on a Mac Mini, over my primary Gigabit ethernet (not even dedicated).  And still I average nearly 100 MB/s write speed.  Remarkable.
 
@@ -55,7 +74,7 @@ Before we dive into NSX-T we should tackle the matter of setting up some virtual
 
 Deploying the virtual ESXi hypervisors as VMs is actually fairly straightforward until you get to the part about networking with VLANs.  If you use VLANs, and wish to make them available to your virtual ESXi hosts, make sure to follow this [tip](https://blog.idstudios.io/nested-esxi-and-vlans/).
 
-The physical ESXi hosts need to have access to a dedicated __NSX Tunnel__ portgroup (this is an NSX requirement).  In my home lab I use standard __VSS__ switches on my physical ESXi boxes so I am not dependent on vSphere - but I used a vSphere __VDS__ for my __virtual-lab__ cluster of VESXi hosts I am dedicating to NSX... so I had to create two __NSX Tunnel__ portgroups (one on each physical ESXi hosts in the local VSS __Switch0__, and one on my _VDS_ that I will use in my virtual ESXi hosts - VLAN 0.  The __NSX Tunnel__ basically just provides a level 2 dedicated portgroup to NSX.
+The physical ESXi hosts need to have access to a dedicated __NSX Tunnel__ portgroup (It is an NSX requirement to have a dedicated vnic or pnic for this).  In my home lab I use standard __VSS__ switches on my physical ESXi boxes so I am not dependent on vSphere - but I used a vSphere __VDS__ for my __pks-lab__ cluster of VESXi hosts I am dedicating to NSX... so I had to create two __NSX Tunnel__ portgroups (one on each physical ESXi hosts in the local VSS __Switch0__, and one on my _VDS_ that I will use in my virtual ESXi hosts - VLAN 0.  The __NSX Tunnel__ basically just provides a level 2 dedicated portgroup to NSX.
 
 As per the diagram above setup your ESXi VMs so that their network adapters are as follows:
 
@@ -69,21 +88,13 @@ __This is important later on when mapping our uplink ports.__
 
 > I like to setup my virtual ESXi hosts with __/etc/ssh/keys-root/authorized_keys__ for passwordless ssh, but this isn't required if you enjoy entering passwords.
 
-Once the ESXi hosts have been uploaded and installed they should be added to a dedicated cluster, such as the __virtual-lab__ in this example.
+Once the ESXi hosts have been uploaded and installed they should be added to a dedicated cluster, such as the __pks-lab__ in this example.
 
-> Now would be a good time to enable __DRS__ on your newly created __virtual-lab__ cluster.  If you forget to do this, as I did, you will regret it when you deploy, and then have to redeploy, your first k8s cluster with PKS, which leverages and depends on __DRS__ for balancing of the k8s node VMs over ESXi hosts.
+> Now would be a good time to enable __DRS__ on your newly created __pks-lab__ cluster.  If you forget to do this, as I did, you will regret it when you deploy, and then have to redeploy, your first k8s cluster with PKS, which leverages and depends on __DRS__ for balancing of the k8s node VMs over ESXi hosts.
 
-We will use the __virtual-lab__ virtual ESXi hosts (vesxi-1 to vesxi-3) for our NSX VIB installs (and NSX managed networks) and for deploying our PKS clusters.
+The following is a screenshot of my vSphere setup for the __labs__ and __pks-lab__ cluster environments, as well as the __Networks__ involved.
 
-We will use the __labs__ cluster and our physical ESXi hosts (esxi-5 and esxi-6 from above) for deploying the NSX and PKS managment VMs, as well as our virtual ESXi VMs.
-
-> You will need to map this to your own ESXi home lab environment and hopefully the information provided here makes it easier and not harder.
-
-The following is a screenshot of my vSphere setup for the __labs__ and __virtual-lab__ cluster environments, as well as the __Networks__ involved.
-
-![vsphere-layout](/content/images/2018/04/vsphere-layout.png)
-
-> I also created an __NSX Network__ on VLAN 90 and bound it to the remaining nics on the virtual ESXi hosts and edge VM, but it likely isn't required and seems to have no direct mapping.
+![vsphere-layout](/content/images/clusters-and-networks-before.png)
 
 
     #!/bin/bash
@@ -94,10 +105,7 @@ The following is a screenshot of my vSphere setup for the __labs__ and __virtual
     --X:logFile=ovftool.log \
     --allowExtraConfig \
     --datastore=datastore-ssd \
-    --net:"Network 0=VLAN Trunk"
-    --net:"Network 1=VM Network"
-    --net:"Network 2=NSX Tunnel"
-    --net:"Network 3=NSX Tunnel"
+    --network="VLAN Trunk" \
     --acceptAllEulas \
     --noSSLVerify \
     --diskMode=thin \
@@ -107,13 +115,13 @@ The following is a screenshot of my vSphere setup for the __labs__ and __virtual
     --prop:guestinfo.ipaddress=192.168.1.81 \
     --prop:guestinfo.netmask=255.255.255.0 \
     --prop:guestinfo.gateway=192.168.1.1 \
-    --prop:guestinfo.dns=192.168.1.10 \
-    --prop:guestinfo.domain=idstudios.local \
+    --prop:guestinfo.dns=8.8.8.8 \
+    --prop:guestinfo.domain=onprem.idstudios.io \
     --prop:guestinfo.domain=pool.ntp.org \
-    --prop:guestinfo.password=mysecret \
+    --prop:guestinfo.password=SuperDuckPassword \
     --prop:guestinfo.ssh=True \
-    ../../pks/nsxt/Nested_ESXi6.5u1_Appliance_Template_v1.0.ova \
-    vi://administrator@idstudios.local:mysecret@vsphere.idstudios.local/?ip=192.168.1.246
+    ../../../pks/nsxt/Nested_ESXi6.5u1_Appliance_Template_v1.0.ova \
+    vi://administrator@vsphere.onprem.idstudios.io:SuperDuckPassword@vsphere.onprem.idstudios.io/?ip=192.168.1.246
 
     ovftool \
     --name=vesxi-2 \
@@ -121,10 +129,7 @@ The following is a screenshot of my vSphere setup for the __labs__ and __virtual
     --X:logFile=ovftool.log \
     --allowExtraConfig \
     --datastore=datastore-ssd \
-    --net:"Network 0=VLAN Trunk"
-    --net:"Network 1=VM Network"
-    --net:"Network 2=NSX Tunnel"
-    --net:"Network 3=NSX Tunnel"
+    --network="VLAN Trunk" \
     --acceptAllEulas \
     --noSSLVerify \
     --diskMode=thin \
@@ -134,13 +139,13 @@ The following is a screenshot of my vSphere setup for the __labs__ and __virtual
     --prop:guestinfo.ipaddress=192.168.1.82 \
     --prop:guestinfo.netmask=255.255.255.0 \
     --prop:guestinfo.gateway=192.168.1.1 \
-    --prop:guestinfo.dns=192.168.1.10 \
-    --prop:guestinfo.domain=idstudios.local \
+    --prop:guestinfo.dns=8.8.8.8 \
+    --prop:guestinfo.domain=onprem.idstudios.io \
     --prop:guestinfo.domain=pool.ntp.org \
-    --prop:guestinfo.password=mysecret \
+    --prop:guestinfo.password=SuperDuckPassword \
     --prop:guestinfo.ssh=True \
-    ../../pks/nsxt/Nested_ESXi6.5u1_Appliance_Template_v1.0.ova \
-    vi://administrator@idstudios.local:mysecret@vsphere.idstudios.local/?ip=192.168.1.246
+    ../../../pks/nsxt/Nested_ESXi6.5u1_Appliance_Template_v1.0.ova \
+    vi://administrator@vsphere.onprem.idstudios.io:SuperDuckPassword@vsphere.onprem.idstudios.io/?ip=192.168.1.246
 
     ovftool \
     --name=vesxi-3 \
@@ -148,10 +153,7 @@ The following is a screenshot of my vSphere setup for the __labs__ and __virtual
     --X:logFile=ovftool.log \
     --allowExtraConfig \
     --datastore=datastore-ssd \
-    --net:"Network 0=VLAN Trunk"
-    --net:"Network 1=VM Network"
-    --net:"Network 2=NSX Tunnel"
-    --net:"Network 3=NSX Tunnel"
+    --network="VLAN Trunk" \
     --acceptAllEulas \
     --noSSLVerify \
     --diskMode=thin \
@@ -161,13 +163,19 @@ The following is a screenshot of my vSphere setup for the __labs__ and __virtual
     --prop:guestinfo.ipaddress=192.168.1.83 \
     --prop:guestinfo.netmask=255.255.255.0 \
     --prop:guestinfo.gateway=192.168.1.1 \
-    --prop:guestinfo.dns=192.168.1.10 \
-    --prop:guestinfo.domain=idstudios.local \
+    --prop:guestinfo.dns=8.8.8.8 \
+    --prop:guestinfo.domain=onprem.idstudios.io \
     --prop:guestinfo.domain=pool.ntp.org \
-    --prop:guestinfo.password=mysecret \
+    --prop:guestinfo.password=SuperDuckPassword \
     --prop:guestinfo.ssh=True \
-    ../../pks/nsxt/Nested_ESXi6.5u1_Appliance_Template_v1.0.ova \
-    vi://administrator@idstudios.local:mysecret@vsphere.idstudios.local/?ip=192.168.1.246
+    ../../../pks/nsxt/Nested_ESXi6.5u1_Appliance_Template_v1.0.ova \
+    vi://administrator@vsphere.onprem.idstudios.io:SuperDuckPassword@vsphere.onprem.idstudios.io/?ip=192.168.1.246
+
+Remember to add two additional network adapters so you have the following configuration for each of the nested ESXi hosts:
+
+* Network Adapter 1: __VLAN Trunk__
+* Network Adapter 2: __VM Network__
+* Network Adapter 3: __NSX Tunnel__
 
 ### Virtual SAN
 
@@ -185,11 +193,9 @@ Or you could use vSAN...
 
 I followed the [NSX-T install document](https://docs.vmware.com/en/VMware-NSX-T/2.1/com.vmware.nsxt.install.doc/GUID-3E0C4CEC-D593-4395-84C4-150CD6285963.html) and it was fairly straightforward up to the point of the Edge and transport nodes.
 
-> You should read this guide and be prepared to refer to it as I won't be repeating all of the information involved in the NSX-T setup, just the bits that aren't entirely clear from the docs.  But don't try to read it in Chrome (all I get is a Bad Request error), VMware documentation has some serious challenges, and is rather unpleasantly formatted and organized even when it does load.  Frankly I don't have the patience - they need a rewrite on their documentation platform (checkout readthedocs) so I downloaded the whole thing as a [pdf](https://docs.vmware.com/en/VMware-NSX-T/2.1/nsxt_21_install.pdf) and read it in Preview. It is actually very pleasant to read and well written when you get it out of it's poorly built HTML delivery context.
+> You should read this guide as I won't be repeating all of the information involved in the NSX-T setup, just the bits that aren't entirely clear from the docs and are only covered off by the automated script referenced in the article.
 
-No offense to VMware but the GUI web form installation guides are sort of ridiculous... type the info in twice and you are on the road to insanity.  __ovftool__ is still the best swiss army knife tool there is!
-
-Here are the __ovftool__ scripts I used (several times over)...
+Here are the __ovftool__ scripts I used (several times over)... mostly taken right from the docs.
 
 ### Step 1 - NSX Manager
 
@@ -227,13 +233,13 @@ Log into NSX Manager and poke around.
 
 ### Step 2 - NSX Controller(s)
 
-Next up the NSX controllers. I deployed 2 controllers by mistake and really only needed one.  Three are recommended, but likely not needed in the lab.
+Next up the NSX controllers. You really only need one in the lab.
 
     #!/bin/bash
 
     ovftool \
     --overwrite \
-    --name=nsx-controller-1 \
+    --name=nsx-controller \
     --X:injectOvfEnv \
     --X:logFile=ovftool.log \
     --allowExtraConfig \
@@ -253,7 +259,7 @@ Next up the NSX controllers. I deployed 2 controllers by mistake and really only
     --prop:nsx_passwd_0=SUP3rD^B3r_2!07 \
     --prop:nsx_cli_passwd_0=SUP3rD^B3r_2!07 \
     --prop:nsx_cli_audit_passwd_0=SUP3rD^B3r_2!07 \
-    --prop:nsx_hostname=nsx-controller-1 \
+    --prop:nsx_hostname=nsx-controller \
     ../../pks/nsxt/nsx-controller-2.1.0.0.0.7395493.ova \
     vi://administrator@idstudios.local:mysecret@vsphere.idstudios.local/?ip=192.168.1.246
 
@@ -270,17 +276,48 @@ _(logged into NSX Manager)_
 * Add your vCenter as a compute manager under __Fabric__>__Compute Managers__.
 * Now you can deploy an Edge VM directly from within the UI via __Fabric__>__Nodes__.
 
-You'll want to put your Edge VM in the management cluster (in my example __labs__).  See the example screenshots for configuration:
+However I prefer to install it with __ovftool__ because I can enable SSH right out of the box.  And doing anything more then once gets tiresome in web forms.
 
-![deploy-edge-1](/content/images/2018/04/deploy-edge-1.png)
+    #!/bin/bash
 
-![deploy-edge-2](/content/images/2018/04/deploy-edge-2.png)
+    ovftool \
+    --name=nsx-edge \
+    --deploymentOption=large \
+    --X:injectOvfEnv \
+    --X:logFile=ovftool.log \
+    --allowExtraConfig \
+    --datastore=datastore-ssd \
+    --net:"Network 0=VM Network" \
+    --net:"Network 1=NSX Tunnel" \
+    --net:"Network 2=NSX Tunnel" \
+    --net:"Network 3=NSX Tunnel" \
+    --acceptAllEulas \
+    --noSSLVerify \
+    --diskMode=thin \
+    --powerOn \
+    --prop:nsx_ip_0=192.168.1.65 \
+    --prop:nsx_netmask_0=255.255.255.0 \
+    --prop:nsx_gateway_0=192.168.1.1 \
+    --prop:nsx_dns1_0=8.8.8.8 \
+    --prop:nsx_domain_0=onprem.idstudios.io \
+    --prop:nsx_ntp_0=pool.ntp.org \
+    --prop:nsx_isSSHEnabled=True \
+    --prop:nsx_allowSSHRootLogin=True \
+    --prop:nsx_passwd_0=SuperDuckPassword \
+    --prop:nsx_cli_passwd_0=SuperDuckPassword \
+    --prop:nsx_hostname=nsx-edge \
+    ../../../pks/nsxt/nsx-edge-2.1.0.0.0.7395502.ova \
+    vi://administrator@vsphere.onprem.idstudios.io:SuperDuckPassword@vsphere.onprem.idstudios.io/?ip=192.168.1.246
 
-The networking is of particular importance.  It is important that the resulting network adapters and associated port groups match up with those shown in my diagram above.
+You'll want to put your Edge VM in the management cluster (in my example __labs__).
+
+The networking is of particular importance.  It is important that the resulting network adapters and associated port groups match up with those shown:
+
+![NSX Edge Nic Layout](/content/images/nsx-edge-nic-layout.png)
 
 ### Step 4 - Transport Zones and Transport Nodes
 
-This is complicated in the documentation, and out of sync with the logical flow.  It also isn't entirely clear how to configure your transport zones. Lam's __Part 3__ assumes you already have your __Host__ and __Edge__ transport nodes configured, along with your transport zones.
+It was never clear to me intially from the documentation how you layout your transport zones. Lam's __Part 3__ assumes you already have your __Host__ and __Edge__ transport nodes configured, along with your transport zones, so it doesn't provide much guidance.  It is actually fairly simple.
 
 At this stage we basically need to:
 
@@ -292,22 +329,21 @@ At this stage we basically need to:
 
 My setup has two transport zones defined:
 
-#### nsxlab-overlay-tz
+#### pks-lab-overlay-tz
 
-![nxslab-overlay-tz](/content/images/2018/04/nxslab-overlay-tz.png)
+![pks-lab-overlay-tz](/content/images/pks-lab-overlay-tz.png)
 
 and 
 
 #### nsxlab-vlan-tz
 
-![nsxlab-vlan-tz](/content/images/2018/04/nsxlab-vlan-tz.png)
+![pks-lab-vlan-tz](/content/images/pks-lab-vlan-tz.png)
 
 > Note the __N-DVS__ logical switch names we assign (and create) here as part of our transport zones.  These will be referenced again when we configure our __Edge Transport Node__ a bit further on.
 
-
 #### Uplink Profiles
 
-Here is another area where the stock documentation will cause confusion.  In our configuration the settings for the uplink profiles are very specific with respect to the network adapter settings.
+Here is another area where the stock documentation caused me confusion.  In this example configuration the settings for the uplink profiles are very specific with respect to the network adapter settings.
 
 Create two uplink profiles under __Fabric__>__Profiles__:
 
@@ -318,33 +354,33 @@ Create two uplink profiles under __Fabric__>__Profiles__:
 
 Ensure the __host-uplink__ settings are as follows:
 
-![profiles-host-uplink](/content/images/2018/04/profiles-host-uplink.png)
+![Host Uplink Profile](/content/images/host-uplink.png)
 
 > Pay particular attention to the __Active Uplinks__ field as that must be set to __vmnic2__ as this is the __NSX Tunnel__ portgroup on our Virtual ESXi hosts.  It would be our dedicated phyiscal nic required by NSX if we were deploying to physical ESXi hosts.  Later on we will reference this when we setup our N-DVS in our host transport node.
 
 Ensure the __edge-uplink__ settings are as follows:
 
-![profiles-edge-uplink](/content/images/2018/04/profiles-edge-uplink.png)
+![Edge Uplink Profile](/content/images/host-uplink.png)
 
-> Pay particular attention to the __Active Uplinks__ field as that must be set to __fp-eth1__ as this is the internal name of the network interface within the Edge VM (??).  Later on we will reference this when we setup our N-DVS in our Edge transport node.
+> Pay particular attention to the __Active Uplinks__ field as that must be set to __fp-eth1__ as this is the internal name of the network interface within the Edge VM.  Later on we will reference this when we setup our N-DVS in our Edge transport node.
 
 #### VTEP IP Pool
 
-And a __VTEP_POOL__ IP Pool of __10.20.30.30__ to __10.20.30.60__.
+And a __VTEP_IP_POOL__ IP Pool of __10.20.30.30__ to __10.20.30.60__.
 
-![vtep-pool](/content/images/2018/04/vtep-pool.png)
+![vtep-ip-pool](/content/images/vtep-ip-pool.png)
 
-> This IP Pool will be used to create virtual tunnel end points on each of the ESXi hosts transport nodes, as well as on the Edge transport node (on the Edge VM), as per the diagram.  
+> This IP Pool will be used to create virtual tunnel end points on each of the ESXi hosts transport nodes, as well as on the Edge transport node (on the Edge VM), as per the diagram.  Remember it is used as network transport for the overlay networks used by the k8s nodes that make up the kubernetes clusters.
 
 ### Step 5 - Host Transport Nodes
 
-In __NSX Manager__ under __Fabric__>__Nodes__>__Hosts__, select your compute manager from the __Managed By:__ drop down, and then expand your target cluster (in my example: __virtual-lab__).  If you select the checkbox at the cluster level, the option to __Configure Cluster__ will enable.
+In __NSX Manager__ under __Fabric__>__Nodes__>__Hosts__, select your compute manager from the __Managed By:__ drop down, and then expand your target cluster (in my example: __pks-lab__).  If you select the checkbox at the cluster level, the option to __Configure Cluster__ will enable.
 
-![fabric-node-create-cluster](/content/images/2018/04/fabric-node-create-cluster.png)
+![fabric-node-create-cluster](/content/images/cluster-config.png)
 
-Note that we allocated the __VTEP_POOL__ IP Pool for this, and we will do it again when we configure the Edge transport node.
+Note that we allocated the __VTEP_IP_POOL__ for this, and we will do it again when we configure the Edge transport node.
 
-By setting up  __Configure Cluster__ it will now automatically create and configure any new ESXi hosts added to the __virtual-lab__ cluster as transport nodes.  And our __host__ transport nodes are now created.
+By setting up  __Configure Cluster__ it will now automatically create and configure any new ESXi hosts added to the __pks-lab__ cluster as transport nodes.  And our __host__ transport nodes are now created.
 
 ### Step 6 - The Edge Transport Node
 
@@ -356,19 +392,19 @@ Under __Fabric__>__Nodes__>__Transport Nodes__ click __Add__.  Enter __edge-tran
 
 Select both of your __transport zones__.  Your _General__ tab should appear as shown below:
 
-![edge-transport-general-1](/content/images/2018/04/edge-transport-general-1.png)
+![edge-transport-general](/content/images/edge-transport-general.png)
 
 There will be two __N-DVS__ entries, one for each of the transport zones we created, and referencing the associated logical switches.
 
-__nsxlab-overlay-switch__
+__pks-lab-overlay-switch__
 
-![edge-transport-ndvs-overlay](/content/images/2018/04/edge-transport-ndvs-overlay.png)
+![edge-transport-ndvs-overlay](/content/images/edge-transport-overlay-ndvs.png)
 
 > Pay careful attention to the __Virtual NICs__ mapping.  For the Overlay switch it should map from __fp-eth0__ to __fp-eth1__.
 
 __nsxlab-vlan-switch__
 
-![edge-transport-ndvs-vlan](/content/images/2018/04/edge-transport-ndvs-vlan.png)
+![edge-transport-ndvs-vlan](/content/images/edge-transport-vlan-ndvs.png)
 
 > Pay careful attention to the __Virtual NICs__ mapping.  For the VLAN switch it should map from __fp-eth1__ to __fp-eth1__.
 
@@ -382,7 +418,7 @@ Everything should be in place to proceed with his direction, with a few adjustme
 * Remember to map all of his __172.30.51.0/24__ addresses to what we implement as __192.168.1.0/24__.  And that we __don't use 172.30.50.0/24__ at all.
 * His pfSense router is really just our primary home gateway to the internet and the both VLANs aren't actually needed in our configuration, we use __192.168.1.8__ on the main network as our __uplink-1__ uplink port address associated with our __T0__ router:
 
-![T0-uplink-1](/content/images/2018/04/T0-uplink-1.png)
+![T0-uplink-1](/content/images/uplink-1.png)
 
 > Although this eliminates the need for the __VLAN 3250__ we do need to setup the static routes on our router to enable access to two k8s networks he uses - __10.10.0.0/24__ (the T1 k8s management router) and __10.20.0.0/24__ (the IP Pool assigned for pks loadbalancers).
 
@@ -465,4 +501,45 @@ If all goes well you'll be `kubectl`ing away with __PKS__.
 
 But if you are like me you'll repeat this entire thing a few dozen times first :)
 
+## Troubleshooting
 
+__1 of 3 post-start scripts failed. Failed Jobs: ncp. Successful Jobs: bosh-dns, kubelet.__
+
+If you get all the way to the end, and go to deploy a k8s cluster only to have this:
+
+    Using environment '192.168.1.201' as client 'ops_manager'
+
+    Task 22
+
+    Task 22 | 22:36:11 | Preparing deployment: Preparing deployment (00:00:03)
+    Task 22 | 22:36:17 | Preparing package compilation: Finding packages to compile (00:00:00)
+    Task 22 | 22:36:17 | Creating missing vms: master/96cb1deb-bc4e-44b3-ac69-220cb0935bf8 (0)
+    Task 22 | 22:36:17 | Creating missing vms: worker/033088fc-5f91-4b57-b9e3-3cc718031e3b (0)
+    Task 22 | 22:36:17 | Creating missing vms: worker/5b8d175b-927e-48c1-a97c-f8b7ef099be5 (2)
+    Task 22 | 22:36:17 | Creating missing vms: worker/d806a4f4-6a1e-4f9c-a2ba-08173699e830 (1)
+    Task 22 | 22:37:21 | Creating missing vms: worker/5b8d175b-927e-48c1-a97c-f8b7ef099be5 (2) (00:01:04)
+    Task 22 | 22:37:23 | Creating missing vms: worker/d806a4f4-6a1e-4f9c-a2ba-08173699e830 (1) (00:01:06)
+    Task 22 | 22:37:28 | Creating missing vms: master/96cb1deb-bc4e-44b3-ac69-220cb0935bf8 (0) (00:01:11)
+    Task 22 | 22:37:32 | Creating missing vms: worker/033088fc-5f91-4b57-b9e3-3cc718031e3b (0) (00:01:15)
+    Task 22 | 22:37:32 | Updating instance master: master/96cb1deb-bc4e-44b3-ac69-220cb0935bf8 (0) (canary) (00:01:36)
+    Task 22 | 22:39:08 | Updating instance worker: worker/033088fc-5f91-4b57-b9e3-3cc718031e3b (0) (canary) (00:03:49)
+    Task 22 | 22:42:57 | Updating instance worker: worker/5b8d175b-927e-48c1-a97c-f8b7ef099be5 (2) (00:06:20)
+    Task 22 | 22:49:17 | Updating instance worker: worker/d806a4f4-6a1e-4f9c-a2ba-08173699e830 (1) (00:07:15)
+                      L Error: Action Failed get_task: Task 2b6efc6b-0a14-4cf5-7f1e-067d80563cce result: 1 of 3 post-start scripts failed. __Failed Jobs: ncp. Successful Jobs: bosh-dns, kubelet.__
+    Task 22 | 22:56:32 | Error: Action Failed get_task: Task 2b6efc6b-0a14-4cf5-7f1e-067d80563cce result: 1 of 3 post-start scripts failed. Failed Jobs: ncp. Successful Jobs: bosh-dns, kubelet.
+
+    Task 22 Started  Wed Apr 11 22:36:11 UTC 2018
+    Task 22 Finished Wed Apr 11 22:56:32 UTC 2018
+    Task 22 Duration 00:20:21
+    Task 22 error
+
+    Capturing task '22' output:
+      Expected task '22' to succeed but state is 'error'
+
+    Exit code 1
+
+### Causes
+
+* Not enabling the NSX-T Errand that tags everything (which is off by default because Flannal is the default networking stack for PKS).  This is set when configuring PKS itself in Ops Manager, in the PKS Tile settings under __Errands__ and  __NSX-T Validation errand__ should be set to "On" or NSX-T will require advanced manual tagging (that is as much as I know) and without it will not work out-of-the-box.  The errand is actually a requirement of NSX-T, unless you are a big brained VMware SE.
+
+* Not using PCF Ops Manager for vSphere __build 249__.
