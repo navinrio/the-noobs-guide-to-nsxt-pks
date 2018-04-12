@@ -70,7 +70,7 @@ The __labs__ cluster is used for management and contains two physical ESXi hosts
 
 The __pks-lab__ cluster is made up of three nested ESXi hosts: __vesxi-1__, __vesxi-2__ and __vesxi-3__.  It is referred to as the __compute cluster__, and it is where PKS will place all the k8s nodes and related artifacts.
 
-> Specs for each physical ESXi host: i7 - 7700, 64GB Ram, 512GB m2 Nvme SSD local datastores.  I run all three of my Virtual ESXi hosts on __esxi-6__ along with my __nsx-edge__, __pks__ and __bosh director__ VMs (as per the diagram).  However, my __vesxi__ virtual ESXi hosts all share the same single iSCSI based datastore, which is actually just a CentOS7 iSCSI target hosting up a VMDK from an SSD running on a Mac Mini, over my primary Gigabit ethernet (not even dedicated).  And still I average nearly 100 MB/s write speed.  Remarkable.
+> Specs for each physical ESXi host: i7 - 7700, 64GB Ram, 512GB m2 Nvme SSD local datastores.  I run all three of my Virtual ESXi hosts on __esxi-6__ along with my __nsx-edge__.  My __vesxi__ virtual ESXi hosts all share the same single iSCSI based datastore, which is actually just a CentOS7 iSCSI target hosting up a VMDK from an SSD running on a Mac Mini, over my primary Gigabit ethernet (not even dedicated).  And still I average nearly 100 MB/s write speed.  Remarkable.
 
 Before we dive into NSX-T we should tackle the matter of setting up some virtual ESXi hosts and a dedicated vSphere cluster:
 
@@ -78,7 +78,7 @@ Before we dive into NSX-T we should tackle the matter of setting up some virtual
 
 Deploying the virtual ESXi hypervisors as VMs is actually fairly straightforward until you get to the part about networking with VLANs.  If you use VLANs, and wish to make them available to your virtual ESXi hosts, make sure to follow this [tip](https://blog.idstudios.io/nested-esxi-and-vlans/).
 
-The physical ESXi hosts need to have access to a dedicated __NSX Tunnel__ portgroup (It is an NSX requirement to have a dedicated vnic or pnic for this).  In my home lab I use standard __VSS__ switches on my physical ESXi boxes so I am not dependent on vSphere - but I used a vSphere __VDS__ for my __pks-lab__ cluster of VESXi hosts I am dedicating to NSX... so I had to create two __NSX Tunnel__ portgroups (one on each physical ESXi hosts in the local VSS __Switch0__, and one on my _VDS_ that I will use in my virtual ESXi hosts - VLAN 0.  The __NSX Tunnel__ basically just provides a level 2 dedicated portgroup to NSX.
+The physical ESXi hosts need to have access to a dedicated __NSX Tunnel__ portgroup (It is an NSX requirement to have a dedicated vnic or pnic for this).  In my home lab I use standard __VSS__ switches on my physical ESXi boxes so I am not dependent on vSphere - but I used a vSphere __VDS__ for my __pks-lab__ cluster of VESXi hosts I am dedicating to NSX... so I had to create two __NSX Tunnel__ portgroups (one on each physical ESXi hosts in the local VSS __Switch0__, and one on my _VDS_ that I will use in my virtual ESXi hosts - VLAN 0.  The __NSX Tunnel__ basically just provides a level 2 dedicated portgroup to NSX upon which NSX can work it's layer 7 magic.
 
 As per the diagram above setup your ESXi VMs so that their network adapters are as follows:
 
