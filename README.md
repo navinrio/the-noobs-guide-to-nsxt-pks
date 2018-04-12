@@ -360,7 +360,7 @@ Ensure the __host-uplink__ settings are as follows:
 
 Ensure the __edge-uplink__ settings are as follows:
 
-![Edge Uplink Profile](/content/images/host-uplink.png)
+![Edge Uplink Profile](/content/images/edge-uplink.png)
 
 > Pay particular attention to the __Active Uplinks__ field as that must be set to __fp-eth1__ as this is the internal name of the network interface within the Edge VM.  Later on we will reference this when we setup our N-DVS in our Edge transport node.
 
