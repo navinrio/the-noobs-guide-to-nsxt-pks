@@ -331,13 +331,13 @@ My setup has two transport zones defined:
 
 #### pks-lab-overlay-tz
 
-![pks-lab-overlay-tz](/content/images/pks-lab-overlay-tz.png)
+![pks-lab-vlan-tz](/content/images/pks-lab-vlan-tz.png)
 
 and 
 
 #### nsxlab-vlan-tz
 
-![pks-lab-vlan-tz](/content/images/pks-lab-vlan-tz.png)
+![pks-lab-overlay-tz](/content/images/pks-lab-overlay-tz.png)
 
 > Note the __N-DVS__ logical switch names we assign (and create) here as part of our transport zones.  These will be referenced again when we configure our __Edge Transport Node__ a bit further on.
 
