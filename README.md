@@ -560,7 +560,7 @@ If things go sideways and you are inclined to drill into why...
 
 As mentioned, you won't get any help from __journald__, but you will find all the logs cleverly hidden at:
 
-    /var/vtep/sys/log
+    /var/vcap/sys/log
 
 > This PKS guide to [diagnostic tools](https://docs.pivotal.io/runtimes/pks/1-0/diagnostic-tools.html) has some good tips.
 
