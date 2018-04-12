@@ -47,7 +47,7 @@ First let's start with a diagram.
 
 ## Context: The Home Lab
 
-![condo-datacenter](/content/images/2018/04/NSX-T-condo-lab.png)
+![the-condo-datacenter](/content/images/condo-lab-diagram.png)
 
 In this post I take the example scenario described in Lam's series and implement it specifically in my home lab setup.  When I first reviewed the [diagram](https://i0.wp.com/www.virtuallyghetto.com/wp-content/uploads/2018/03/1.-Getting-Started-With-PKS-Overview-0.png?ssl=1) from the article, it wasn't clear to me how the two VLANs (3250 and 3251) might relate to the physical network, so I am presenting the entire picture here in an attempt to clear that up for anyone else who finds it fuzzy or confusing.
 
