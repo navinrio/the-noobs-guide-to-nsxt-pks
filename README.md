@@ -203,7 +203,7 @@ I followed the [NSX-T install document](https://docs.vmware.com/en/VMware-NSX-T/
 
 > You should read this guide as I won't be repeating all of the information involved in the NSX-T setup, just the bits that aren't entirely clear from the docs and are only covered off by the automated script referenced in Mr. Lam's article.
 
-Here are the __ovftool__ scripts I used (several times over)... mostly taken right from the docs.
+Here is the __ovftool__ script I used (several times over)... mostly taken right from the docs.
 
 ### Step 1 - NSX Manager
 
