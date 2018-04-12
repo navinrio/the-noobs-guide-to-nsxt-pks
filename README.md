@@ -12,7 +12,7 @@ _Part 1_ of the PKS series is relatively straightforward:
 
 [Getting started with VMware Pivotal Container Service (PKS) Part 1: Overview](https://www.virtuallyghetto.com/2018/03/getting-started-with-vmware-pivotal-container-service-pks-part-1-overview.html)
 
-_Part 2_ involves prepping your PKS workstation VM.  The folks at PKS are fond of Ubuntu, and so the tutorial uses an Ubuntu VM, but any machine that can run the required tools will do.  I prepped both my Macbook Pro and my CentOS7 cluster-builder control station with the necessary tools, as per the article:
+_Part 2_ involves prepping your PKS workstation VM.  The folks at PKS are fond of Ubuntu, and so the tutorial uses an Ubuntu VM, but any machine that can run the required tools will do.  I prepped both my Macbook Pro and my CentOS7 [cluster-builder](https://github.com/ids/cluster-builder) control station with the necessary tools, as per the article:
 
 [Getting started with VMware Pivotal Container Service (PKS) Part 2: PKS Client](https://www.virtuallyghetto.com/2018/03/getting-started-with-vmware-pivotal-container-service-pks-part-2-pks-client.html)
 
